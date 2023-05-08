@@ -36,7 +36,9 @@ class TestWebApp(unittest.TestCase):
 
     def test_no_access_to_profile(self):
         # TODO: Check that non-logged-in user should be redirected to /login
-        assert False
+        response = self.client.get('/profile')
+        assert response.status_code == 302
+        assert response.location.startswith("/login")
 
     def test_register_user(self):
         response = self.client.post('/signup', data = {
@@ -81,6 +83,20 @@ class TestWebApp(unittest.TestCase):
 
     def test_xss_vulnerability(self):
         # TODO: Can we store javascript tags in the username field?
-        assert False
+
+        # create a user with a dodgy username
+        self.client.post('/signup', data = {
+            'email' : 'test@example.com',
+            'name' : '<script>alert(1);</script>',
+            'password' : 'test123'
+        }, follow_redirects = True)
+
+        # check that the username has been correctly escaped on the profile page
+        # because follow_redirects = true, after logging in, this will request /profile
+        response = self.client.post('/login', data = {
+            'email' : 'test@example.com',
+            'password' : 'test123'
+        }, follow_redirects = True)
+        assert not "<script>" in response.text
 
 
